@@ -2,54 +2,52 @@ package crypto
 
 import (
 	"testing"
-	"log"
-	"math/rand"
-	"time"
-	"fmt"
 )
 
 func TestSortition(t *testing.T) {
-	tau := int64(1000)
-	totalWeight := int64(1000 * 1000)
-	user := MakeTestUser(1000)
 
-	for i := 0; i < 10; i++ {
-		role := fmt.Sprintf("person-%v", i)
-		seed := user.sk.Compute([]byte(role))
-		j := user.Sortition(role, seed, tau, totalWeight)
-		log.Printf("got j: %v", j)
+	tau := uint64(1000)
+	totalWeights := uint64(1000 * 1000)
+
+	privKeyBytes := []byte {
+		114, 48, 107, 12, 26, 4, 242, 59, 80, 179, 244, 231, 237, 138, 203, 76,
+		231, 118, 0, 87, 31, 67, 89, 47, 122, 37, 216, 236, 48, 137, 81, 35,
+		217, 39, 229, 179, 68, 179, 86, 114, 231, 184, 80, 232, 95, 78, 4, 73,
+		195, 194, 47, 181, 191, 128, 41, 43, 76, 136, 36, 170, 123, 115, 59, 99 }
+
+	user := MakeTestUser(1000, privKeyBytes)
+
+	role := "person"
+	seed := []byte {0xDE, 0xAD, 0xBE, 0xEF}
+
+	if user.checkSortitionPrecalc(tau, totalWeights) {
+		t.Error("User should be init'ed with no interval pre-calcs")
 	}
-}
 
-func randoSelect(tau int64, totalWeight int64, userWeight int64) int {
-	cntSelect := 0
-	for i := int64(0); i < userWeight; i++ {
-		if rand.Int63n(totalWeight) < tau {
-			cntSelect += 1
-		}
+	j := user.Sortition(role, seed, tau, totalWeights)
+	if j != 2 {
+		t.Error("Given fixed user (sk), role, seed, weights and tau chosen j should be stable.")
 	}
-	return cntSelect
-}
 
-func histoRandoSelect(numTrials int, tau int64, totalWeight int64, userWeight int64) []int {
-	rand.Seed(time.Now().UnixNano())
-	selectCnts := make([]int, userWeight)
-	for i := 0; i < numTrials; i++ {
-		s := randoSelect(tau, totalWeight, userWeight)
-		selectCnts[s] += 1
+	if !user.checkSortitionPrecalc(tau, totalWeights) {
+		t.Error("For fixed weights and tau User should pre-calc and save intervals.")
 	}
-	return selectCnts
-}
 
-func TestMath(t *testing.T) {
-	w := int64(100)
-	totalWeight := int64(1000 * 1000)
-	tau := int64(30)
+	tau = uint64(10 * 1000)
 
-	selectHisto := histoRandoSelect(100 * 1000, tau, totalWeight, w)
-	for i, s := range selectHisto {
-		if s != 0 {
-			log.Printf("histo bucket, cnt: %v, %v", i, s)
-		}
+	if user.checkSortitionPrecalc(tau, totalWeights) {
+		t.Error("Changing params to Sortition should invalidate pre-calc.")
 	}
+
+	j = user.Sortition(role, seed, tau, totalWeights)
+	if j != 13 {
+		t.Error("Given fixed user (sk), role, seed, weights and tau chosen j should be stable.")
+	}
+
+	user.SetWeight(100)
+
+	if user.checkSortitionPrecalc(tau, totalWeights) {
+		t.Error("Changing user weight should invalidate pre-calc.")
+	}
+
 }
