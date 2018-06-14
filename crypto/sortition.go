@@ -44,6 +44,14 @@ func (u *User) isPubKeyDefined() bool {
 	return len([]byte(u.pk)) != 0
 }
 
+func (u *User) initPublicFromPrivateKey() {
+	pk, ok := u.sk.Public()
+	if !ok {
+		log.Panic("Public key init failed")
+	}
+	u.pk = pk
+}
+
 func MakeTestUser(weight uint64, privKeyBytes []byte) *User {
 	var sk vrf.PrivateKey
 	if privKeyBytes == nil {
@@ -155,7 +163,7 @@ func (u *User) Sortition(role string, seed []byte, tau, totalWeights uint64) ([]
 func (u *User) VerifySort(role string, seed []byte, tau, totalWeights uint64, hashBytes, proofBytes []byte) (int, error) {
 
 	if !u.isPubKeyDefined() {
-		log.Fatal("Public key must be defined on User for this operation.")
+		log.Panic("Public key must be defined on User for this operation.")
 	}
 
 	if !u.pk.Verify(makeMessage(role, seed), hashBytes, proofBytes) {

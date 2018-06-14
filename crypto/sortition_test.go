@@ -106,3 +106,53 @@ func TestSortition(t *testing.T) {
 		t.Error("Changing user weight should invalidate pre-calc.")
 	}
 }
+
+// maybe want more powerful test framework?
+// see discussion here: https://stackoverflow.com/questions/31595791/how-to-test-panics
+func assertPanic(t *testing.T, f func()) {
+	defer func() {
+		if r := recover(); r == nil {
+			t.Errorf("The code did not panic")
+		}
+	}()
+	f()
+}
+
+func TestSortAndVerify(t *testing.T) {
+
+	tau := uint64(50)
+	totalWeights := uint64(100)
+
+	role := "person"
+	seed := []byte {0xDE, 0xAD, 0xBE, 0xEF}
+
+	user := MakeTestUser(10, nil)
+
+	hashBytes, proofBytes, j := user.Sortition(role, seed, tau, totalWeights)
+
+	// should panic because test user does not yet have a public key
+	assertPanic(t, func() {user.VerifySort(role, seed, tau, totalWeights, hashBytes, proofBytes)})
+
+	user.initPublicFromPrivateKey()
+
+	testJ, _ := user.VerifySort(role, seed, tau, totalWeights, hashBytes, proofBytes)
+	if j != testJ {
+		t.Errorf("Inconsisten value for j: expect %v, got %v", j, testJ)
+	}
+
+	_, err := user.VerifySort(role, seed, tau, totalWeights, append(hashBytes, 0), proofBytes)
+	if err == nil {
+		t.Error("Verify should fail if hash is different")
+	}
+
+	_, err = user.VerifySort(role, seed, tau, totalWeights, hashBytes, append(proofBytes, 0))
+	if err == nil {
+		t.Error("Verify should fail if proof is different")
+	}
+
+	_, err = user.VerifySort(role, append(seed, 0), tau, totalWeights, hashBytes, proofBytes)
+	if err == nil {
+		t.Error("Verify should fail if seed is different")
+	}
+
+}
