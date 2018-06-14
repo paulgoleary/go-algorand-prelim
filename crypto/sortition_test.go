@@ -4,6 +4,8 @@ import (
 	"testing"
 	"math/big"
 	"fmt"
+	"math/rand"
+	"log"
 )
 
 func kindaCompare( li ProbInterval, ri ProbInterval ) bool {
@@ -137,7 +139,7 @@ func TestSortAndVerify(t *testing.T) {
 
 	testJ, _ := user.VerifySort(role, seed, tau, totalWeights, hashBytes, proofBytes)
 	if j != testJ {
-		t.Errorf("Inconsisten value for j: expect %v, got %v", j, testJ)
+		t.Errorf("Inconsistent value for j: expect %v, got %v", j, testJ)
 	}
 
 	_, err := user.VerifySort(role, seed, tau, totalWeights, append(hashBytes, 0), proofBytes)
@@ -154,5 +156,52 @@ func TestSortAndVerify(t *testing.T) {
 	if err == nil {
 		t.Error("Verify should fail if seed is different")
 	}
+}
 
+func randoSortAndVerify(t *testing.T, weightHisto map[int]int) {
+
+	tau := uint64(50)
+	totalWeights := uint64(1000 * 1000 * 1000) // 1B token supply
+
+	role := "person"
+	seed := make([]byte, seedSize)
+	rand.Read(seed) // rando seed
+
+	// user has 1m 'staked' tokens
+	user := MakeTestUser(1000 * 1000, nil) // rando user - i.e. private key
+
+	hashBytes, proofBytes, j := user.Sortition(role, seed, tau, totalWeights)
+
+	user.initPublicFromPrivateKey()
+
+	testJ, _ := user.VerifySort(role, seed, tau, totalWeights, hashBytes, proofBytes)
+
+	if j != testJ {
+		t.Errorf("Inconsistent value for j: expect %v, got %v", j, testJ)
+	}
+	weightHisto[j] += 1
+}
+
+func TestRandoSortAndVerify(t *testing.T) {
+
+	weightHistoMap := make(map[int]int)
+
+	for i := 0; i < 1000; i++ {
+		randoSortAndVerify(t, weightHistoMap)
+	}
+
+	maxJ := -1
+	for j, _ := range weightHistoMap {
+		if j > maxJ {
+			maxJ = j
+		}
+	}
+
+	weightHisto := make([]int, maxJ + 1)
+
+	for j, cnt := range weightHistoMap {
+		weightHisto[j] = cnt
+	}
+
+	log.Printf("test j (user count) histo: %v", weightHisto)
 }
