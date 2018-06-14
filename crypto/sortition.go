@@ -88,9 +88,19 @@ func (u *User) getSortitionIntervals(tau, totalWeights uint64) []ProbInterval {
 		return res
 	}
 
+	// TODO: maybe could be more optimal. could calc all the binomials first and then calc the intervals
+	// since we calc and re-use this is likely not a significant issue but i suppose that depends on how
+	//  effective the re-use is; e.g. if total weights change frequently between calculations
+	// on the other hand, this method quits fairly early when the weight is high because the probabilities converge
+	//  quickly and we seem to run out of precision ...
 	intervals := make([]ProbInterval, 0)
 	for j := uint64(0); j < u.weight + 1; j++ {
-		start := sumBinomialDist(j)
+		var start *big.Float
+		if j == 0 {
+			start = big.NewFloat(0.0)
+		} else {
+			start = intervals[j - 1].end
+		}
 		end := sumBinomialDist(j + 1)
 		if start.Cmp(end) == 0 {
 			break

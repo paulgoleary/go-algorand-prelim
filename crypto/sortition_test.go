@@ -2,7 +2,6 @@ package crypto
 
 import (
 	"testing"
-	"log"
 	"math/big"
 	"fmt"
 )
@@ -28,8 +27,9 @@ func kindaCompIntervals(leftIntervals []ProbInterval, rightIntervals []ProbInter
 	return true
 }
 
-func TestBinom(t *testing.T) {
+func TestBinoms(t *testing.T) {
 
+	// binomials from 10 coin tosses
 	expectBinoms := []float64 {0.000977, 0.009766, 0.043945, 0.117188, 0.205078, 0.246094, 0.205078, 0.117188, 0.043945, 0.009766, 0.000977}
 	expectIntervals := make([]ProbInterval, len(expectBinoms))
 
@@ -43,7 +43,6 @@ func TestBinom(t *testing.T) {
 			expectIntervals[i].end.Add(expectIntervals[i].end, expectIntervals[i].start)
 		}
 	}
-	log.Print(expectIntervals)
 
 	// coin toss experiment
 	tau := uint64(50)
@@ -106,5 +105,4 @@ func TestSortition(t *testing.T) {
 	if user.checkSortitionPrecalc(tau, totalWeights) {
 		t.Error("Changing user weight should invalidate pre-calc.")
 	}
-
 }
