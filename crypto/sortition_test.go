@@ -80,7 +80,7 @@ func TestSortition(t *testing.T) {
 		t.Error("User should be init'ed with no interval pre-calcs")
 	}
 
-	j := user.Sortition(role, seed, tau, totalWeights)
+	_, _, j := user.Sortition(role, seed, tau, totalWeights)
 	if j != 2 {
 		t.Error("Given fixed user (sk), role, seed, weights and tau chosen j should be stable.")
 	}
@@ -95,7 +95,7 @@ func TestSortition(t *testing.T) {
 		t.Error("Changing params to Sortition should invalidate pre-calc.")
 	}
 
-	j = user.Sortition(role, seed, tau, totalWeights)
+	_, _, j = user.Sortition(role, seed, tau, totalWeights)
 	if j != 13 {
 		t.Error("Given fixed user (sk), role, seed, weights and tau chosen j should be stable.")
 	}

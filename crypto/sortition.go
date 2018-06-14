@@ -113,17 +113,18 @@ func (u *User) getSortitionIntervals(tau, totalWeights uint64) []ProbInterval {
 	return intervals
 }
 
-func (u *User) getHashInt(role string, seed []byte) *big.Int {
+func (u *User) getVRF(role string, seed []byte) ([]byte, []byte) {
 	// <hash, pi> <- VRFsk(seed||role)
 	roleBytes := []byte(role)
-	hash := u.sk.Compute(append(seed, roleBytes...))
-	return big.NewInt(0).SetBytes(hash)
+	return u.sk.Prove(append(seed, roleBytes...))
 }
 
-func (u *User) Sortition(role string, seed []byte, tau, totalWeights uint64) int {
+func (u *User) Sortition(role string, seed []byte, tau, totalWeights uint64) ([]byte, []byte, int) {
 	intervals := u.getSortitionIntervals(tau, totalWeights)
 
-	hashInt := u.getHashInt(role, seed)
+	hashBytes, hashProof := u.getVRF(role, seed)
+
+	hashInt := big.NewInt(0).SetBytes(hashBytes)
 
 	randProb := new(big.Float).SetInt(hashInt).Quo(big.NewFloat(0.0).SetInt(hashInt), hashDenom)
 
@@ -133,7 +134,8 @@ func (u *User) Sortition(role string, seed []byte, tau, totalWeights uint64) int
 		return cmp >= 0
 	}
 	j := sort.Search(len(intervals), cmpInterval)
-	return j
+
+	return hashBytes, hashProof, j
 }
 
 func (u *User) SetWeight(newWeight uint64) {
