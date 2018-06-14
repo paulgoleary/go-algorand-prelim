@@ -6,6 +6,8 @@ import (
 	"math"
 	"sort"
 	"fmt"
+	"log"
+	"github.com/pkg/errors"
 )
 
 // algorand paper says they use curve 25519 and sha-256 for hash function
@@ -26,6 +28,7 @@ type ProbParams struct {
 
 type User struct {
 	sk vrf.PrivateKey
+	pk vrf.PublicKey
 
 	weight uint64
 
@@ -35,6 +38,11 @@ type User struct {
 }
 
 var ppInit = ProbParams{^uint64(0), ^uint64(0)}
+var emptyKey = make([]byte, 0)
+
+func (u *User) isPubKeyDefined() bool {
+	return len([]byte(u.pk)) != 0
+}
 
 func MakeTestUser(weight uint64, privKeyBytes []byte) *User {
 	var sk vrf.PrivateKey
@@ -43,7 +51,7 @@ func MakeTestUser(weight uint64, privKeyBytes []byte) *User {
 	} else {
 		sk = vrf.PrivateKey(privKeyBytes)
 	}
-	return &User{sk, weight, ppInit, make([]ProbInterval, 0)}
+	return &User{sk, emptyKey, weight, ppInit, make([]ProbInterval, 0)}
 }
 
 // in algorand the seed for a round is based on a vrf from the previous round
@@ -113,16 +121,13 @@ func (u *User) getSortitionIntervals(tau, totalWeights uint64) []ProbInterval {
 	return intervals
 }
 
-func (u *User) getVRF(role string, seed []byte) ([]byte, []byte) {
-	// <hash, pi> <- VRFsk(seed||role)
+func makeMessage(role string, seed []byte) []byte {
 	roleBytes := []byte(role)
-	return u.sk.Prove(append(seed, roleBytes...))
+	return append(seed, roleBytes...)
 }
 
-func (u *User) Sortition(role string, seed []byte, tau, totalWeights uint64) ([]byte, []byte, int) {
+func (u *User) calcSubUsers(tau, totalWeights uint64, hashBytes []byte) int {
 	intervals := u.getSortitionIntervals(tau, totalWeights)
-
-	hashBytes, hashProof := u.getVRF(role, seed)
 
 	hashInt := big.NewInt(0).SetBytes(hashBytes)
 
@@ -135,7 +140,31 @@ func (u *User) Sortition(role string, seed []byte, tau, totalWeights uint64) ([]
 	}
 	j := sort.Search(len(intervals), cmpInterval)
 
+	return j
+}
+
+func (u *User) Sortition(role string, seed []byte, tau, totalWeights uint64) ([]byte, []byte, int) {
+
+	hashBytes, hashProof := u.sk.Prove(makeMessage(role, seed))
+
+	j := u.calcSubUsers(tau, totalWeights, hashBytes)
+
 	return hashBytes, hashProof, j
+}
+
+func (u *User) VerifySort(role string, seed []byte, tau, totalWeights uint64, hashBytes, proofBytes []byte) (int, error) {
+
+	if !u.isPubKeyDefined() {
+		log.Fatal("Public key must be defined on User for this operation.")
+	}
+
+	if !u.pk.Verify(makeMessage(role, seed), hashBytes, proofBytes) {
+		return -1, errors.New("Failed VRF verification")
+	}
+
+	j := u.calcSubUsers(tau, totalWeights, hashBytes)
+
+	return j, nil
 }
 
 func (u *User) SetWeight(newWeight uint64) {
