@@ -2,7 +2,64 @@ package crypto
 
 import (
 	"testing"
+	"log"
+	"math/big"
+	"fmt"
 )
+
+func kindaCompare( li ProbInterval, ri ProbInterval ) bool {
+	lstr := fmt.Sprintf("%.4f %.4f", li.start, li.end)
+	rstr := fmt.Sprintf("%.4f %.4f", ri.start, ri.end)
+	return lstr == rstr
+}
+
+func kindaCompIntervals(leftIntervals []ProbInterval, rightIntervals []ProbInterval) bool {
+	if len(leftIntervals) != len(rightIntervals) {
+		return false
+	}
+
+	for i, li := range leftIntervals {
+		ri := rightIntervals[i]
+		if !kindaCompare(li, ri) {
+			return false
+		}
+	}
+
+	return true
+}
+
+func TestBinom(t *testing.T) {
+
+	expectBinoms := []float64 {0.000977, 0.009766, 0.043945, 0.117188, 0.205078, 0.246094, 0.205078, 0.117188, 0.043945, 0.009766, 0.000977}
+	expectIntervals := make([]ProbInterval, len(expectBinoms))
+
+	for i := 0; i < len(expectIntervals); i++ {
+		if i == 0 {
+			expectIntervals[i].start = big.NewFloat(0.0)
+			expectIntervals[i].end = big.NewFloat(expectBinoms[i])
+		} else {
+			expectIntervals[i].start = expectIntervals[i - 1].end
+			expectIntervals[i].end = big.NewFloat(expectBinoms[i])
+			expectIntervals[i].end.Add(expectIntervals[i].end, expectIntervals[i].start)
+		}
+	}
+	log.Print(expectIntervals)
+
+	// coin toss experiment
+	tau := uint64(50)
+	totalWeights := uint64(100)
+
+	role := "person"
+	seed := []byte {0xDE, 0xAD, 0xBE, 0xEF}
+
+	user := MakeTestUser(10, nil)
+
+	user.Sortition(role, seed, tau, totalWeights)
+
+	if !kindaCompIntervals(expectIntervals[0:11], user.sortitionIntervals) {
+		t.Error("Expected (kinda) equivalent results")
+	}
+}
 
 func TestSortition(t *testing.T) {
 

@@ -5,13 +5,18 @@ import (
 	"github.com/coniks-sys/coniks-go/crypto/vrf"
 	"math"
 	"sort"
+	"fmt"
 )
 
 // algorand paper says they use curve 25519 and sha-256 for hash function
 
 type ProbInterval struct {
-	piStart *big.Float
-	piEnd *big.Float
+	start *big.Float
+	end *big.Float
+}
+
+func (pi ProbInterval) String() string {
+	return fmt.Sprintf("[%v, %v)", pi.start, pi.end)
 }
 
 type ProbParams struct {
@@ -84,13 +89,13 @@ func (u *User) getSortitionIntervals(tau, totalWeights uint64) []ProbInterval {
 	}
 
 	intervals := make([]ProbInterval, 0)
-	for j := uint64(0); j < u.weight; j++ {
-		xStart := sumBinomialDist(j)
-		xEnd := sumBinomialDist(j + 1)
-		if xStart.Cmp(xEnd) == 0 {
+	for j := uint64(0); j < u.weight + 1; j++ {
+		start := sumBinomialDist(j)
+		end := sumBinomialDist(j + 1)
+		if start.Cmp(end) == 0 {
 			break
 		}
-		intervals = append(intervals, ProbInterval{xStart, xEnd})
+		intervals = append(intervals, ProbInterval{start, end})
 	}
 	u.pp.tau = tau
 	u.pp.totalWeights = totalWeights
@@ -98,19 +103,23 @@ func (u *User) getSortitionIntervals(tau, totalWeights uint64) []ProbInterval {
 	return intervals
 }
 
-func (u *User) Sortition(role string, seed []byte, tau, totalWeights uint64) int {
-	intervals := u.getSortitionIntervals(tau, totalWeights)
-
+func (u *User) getHashInt(role string, seed []byte) *big.Int {
 	// <hash, pi> <- VRFsk(seed||role)
 	roleBytes := []byte(role)
 	hash := u.sk.Compute(append(seed, roleBytes...))
-	hashInt := big.NewInt(0).SetBytes(hash)
+	return big.NewInt(0).SetBytes(hash)
+}
+
+func (u *User) Sortition(role string, seed []byte, tau, totalWeights uint64) int {
+	intervals := u.getSortitionIntervals(tau, totalWeights)
+
+	hashInt := u.getHashInt(role, seed)
 
 	randProb := new(big.Float).SetInt(hashInt).Quo(big.NewFloat(0.0).SetInt(hashInt), hashDenom)
 
 	cmpInterval := func(i int) bool {
 		xx := intervals[i]
-		cmp := xx.piEnd.Cmp(randProb)
+		cmp := xx.end.Cmp(randProb)
 		return cmp >= 0
 	}
 	j := sort.Search(len(intervals), cmpInterval)
@@ -120,4 +129,8 @@ func (u *User) Sortition(role string, seed []byte, tau, totalWeights uint64) int
 func (u *User) SetWeight(newWeight uint64) {
 	u.weight = newWeight
 	u.pp = ppInit
+}
+
+func (u *User) String() string {
+	return fmt.Sprintf("%v", u.sortitionIntervals) // TODO: more !!!
 }
