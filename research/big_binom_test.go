@@ -4,7 +4,7 @@ import (
 	"testing"
 	"math/big"
 	"log"
-	"github.com/paulgoleary/go-algorand/crypto"
+	"github.com/paulgoleary/go-algorand/state"
 )
 
 /*
@@ -47,7 +47,7 @@ func TestBigBinomials(t *testing.T) {
 
 	userWeight := uint64(1000)
 
-	user := crypto.MakeTestUser(userWeight, nil)
+	user := state.MakeTestUser(userWeight, nil)
 	user.Sortition("", make([]byte,0), tau, Wt)
 	log.Printf("test user: %v", user)
 

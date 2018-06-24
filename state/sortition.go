@@ -1,4 +1,4 @@
-package crypto
+package state
 
 import (
 	"math/big"
@@ -26,17 +26,6 @@ type ProbParams struct {
 	totalWeights uint64
 }
 
-type User struct {
-	sk vrf.PrivateKey
-	pk vrf.PublicKey
-
-	weight uint64
-
-	pp ProbParams
-
-	sortitionIntervals []ProbInterval
-}
-
 var ppInit = ProbParams{^uint64(0), ^uint64(0)}
 var emptyKey = make([]byte, 0)
 
@@ -50,6 +39,10 @@ func (u *User) initPublicFromPrivateKey() {
 		log.Panic("Public key init failed")
 	}
 	u.pk = pk
+}
+
+func (u *User) GetPublicKeyBytes() []byte {
+	return u.pk
 }
 
 func MakeTestUser(weight uint64, privKeyBytes []byte) *User {
