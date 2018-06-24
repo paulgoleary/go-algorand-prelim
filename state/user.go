@@ -3,6 +3,8 @@ package state
 import (
 	"github.com/coniks-sys/coniks-go/crypto/vrf"
 	"log"
+	"bytes"
+	"github.com/paulgoleary/go-algorand/crypto"
 )
 
 // TODO: factor sortition-specific attributes into sub-struct?
@@ -27,7 +29,6 @@ func MakeTestUser(weight uint64, privKeyBytes []byte) *User {
 	return &User{sk, emptyKey, weight, ppInit, make([]ProbInterval, 0)}
 }
 
-
 func (u *User) isPubKeyDefined() bool {
 	return len([]byte(u.pk)) != 0
 }
@@ -45,5 +46,9 @@ func (u *User) GetPublicKeyBytes() []byte {
 }
 
 func (u *User) Sign(msgs ...[]byte) []byte {
-	return make([]byte, 0) // TODO !!!
+	catMessage := bytes.Buffer{}
+	for _, m := range msgs {
+		catMessage.Write(m)
+	}
+	return crypto.Sign(u.sk, catMessage.Bytes())
 }
