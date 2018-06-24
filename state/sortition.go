@@ -29,32 +29,6 @@ type ProbParams struct {
 var ppInit = ProbParams{^uint64(0), ^uint64(0)}
 var emptyKey = make([]byte, 0)
 
-func (u *User) isPubKeyDefined() bool {
-	return len([]byte(u.pk)) != 0
-}
-
-func (u *User) initPublicFromPrivateKey() {
-	pk, ok := u.sk.Public()
-	if !ok {
-		log.Panic("Public key init failed")
-	}
-	u.pk = pk
-}
-
-func (u *User) GetPublicKeyBytes() []byte {
-	return u.pk
-}
-
-func MakeTestUser(weight uint64, privKeyBytes []byte) *User {
-	var sk vrf.PrivateKey
-	if privKeyBytes == nil {
-		sk, _ = vrf.GenerateKey(nil) // TODO: rando?
-	} else {
-		sk = vrf.PrivateKey(privKeyBytes)
-	}
-	return &User{sk, emptyKey, weight, ppInit, make([]ProbInterval, 0)}
-}
-
 // in algorand the seed for a round is based on a vrf from the previous round
 var seedSize = vrf.Size
 var bigHashLen = big.NewInt(vrf.Size * 8)

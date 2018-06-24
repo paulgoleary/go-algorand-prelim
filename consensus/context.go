@@ -3,6 +3,7 @@ package consensus
 import (
 	"fmt"
 	"github.com/paulgoleary/go-algorand/state"
+	"math/big"
 )
 
 type Context struct {
@@ -12,6 +13,10 @@ type Context struct {
 
 func (c *Context) getTotalWeights() uint64 {
 	return 0 // TODO !!!
+}
+
+func (c *Context) getLastBlockHash() []byte {
+	return make([]byte, 0) // TODO!
 }
 
 func makeRoleString(roleName string, round, step int) string {
@@ -25,6 +30,18 @@ func (c *Context) CommitteeVote(round, step int, tau uint64, value []byte) {
 
 	if j > 0 {
 		// i won !!!
-		c.Gossip(c.theUser.GetPublicKeyBytes(), )
+		signBytes := [6][]byte {
+			big.NewInt(int64(round)).Bytes(),
+			big.NewInt(int64(step)).Bytes(),
+			hashBytes,
+			hashProof,
+			c.getLastBlockHash(),
+			value,
+		}
+		c.Gossip(c.theUser.GetPublicKeyBytes(), c.theUser.Sign(signBytes[:]...))
 	}
+}
+
+func (c *Context) Gossip(userPubKeyBytes []byte, committeeSig []byte) {
+	return // TODO
 }
